@@ -1,9 +1,9 @@
 {:deps
  {nuid/transit {:sha "f7d6438dfaf148e69c483f0267f6d4bd580dae92"
                 :git/url "git@github.com:NuID/transit.git"}
-  nuid/utils {:sha "6f4f7c9118b5174f7d7281eadd4d58691e343677"
+  nuid/utils {:sha "1cdd7ab91f4449a1cf5039d16e53fb1d07a2ae3e"
               :git/url "git@github.com:NuID/utils.git"}
-  nuid/bn {:sha "2ac9990c67193649394cfc6563353ec2aaa41ff5"
+  nuid/bn {:sha "d4c12ac791a1e1c30a0d946000a7dbec3023f17f"
            :git/url "git@github.com:NuID/bn.git"}
   org.clojure/clojurescript {:mvn/version "1.10.439"}
   org.clojure/core.async {:mvn/version "0.4.474"}
