@@ -1,5 +1,6 @@
 (ns nuid.ethereum
   (:require
+   [nuid.transit :as transit]
    [nuid.utils :as utils]
    [nuid.bn :as bn]
    #?@(:clj
@@ -53,13 +54,13 @@
                          "gasLimit" (or gas-limit default-gas-limit)
                          "to" (or to (:coinbase client))
                          "value" (or value "0x00")
-                         "data" (utils/hex-encode data)})]
+                         "data" (transit/hex-encode data)})]
        (.sign tx (b/Buffer.from (:private-key client) "hex"))
        (str "0x" (-> tx .serialize (.toString "hex"))))))
 
 (defn decode-transaction
   [{:keys [transaction]}]
-  (utils/hex-decode
+  (transit/hex-decode
    #?(:clj (.getInput transaction)
       :cljs (.-input transaction))))
 
