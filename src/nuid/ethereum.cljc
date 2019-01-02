@@ -12,6 +12,8 @@
         ["buffer" :as b]]))
   #?@(:clj
       [(:import
+        (org.web3j.tx FastRawTransactionManager)
+        (org.web3j.crypto Credentials)
         (org.web3j.protocol
          core.methods.request.Transaction
          http.HttpService
@@ -25,16 +27,16 @@
   #?(:clj (BigInteger/valueOf 4300000)
      :cljs (web3/utils.toBN "4300000")))
 
-#?(:clj (defn create-raw-transaction-manager [private-key]
-          (RawTransactionManager. (Credentials/create private-key))))
-
 (defn make-connection [{:keys [http-provider] :as config}]
-  (let [provider (or http-provider "http://localhost:8545")]
-    (assoc
-     config
-     :conn
-     #?(:clj (Web3j/build (HttpService. provider))
-        :cljs (web3. (web3/providers.HttpProvider. provider))))))
+  (let [conn #?(:cljs (web3. (web3/providers.HttpProvider. http-provider))
+                :clj (Web3j/build (HttpService. http-provider)))]
+    (assoc config :conn conn)))
+
+#?(:clj (defn make-fast-raw-transaction-manager
+          [{:keys [conn private-key] :as client}]
+          (let [creds (Credentials/create private-key)
+                rtm (FastRawTransactionManager. conn creds)]
+            (assoc client :transaction-manager rtm))))
 
 (defn get-transaction-count
   [{:keys [client address channel]}]
@@ -69,13 +71,16 @@
     :as transaction}]
   (let [c (or channel (chan 1))]
     #?(:clj
-       (.sendTransaction
-        (:transaction-manager client)
-        (or gas-price default-gas-price)
-        (or gas-limit default-gas-limit)
-        (or to (:coinbase client))
-        data
-        (or value (BigInteger/valueOf 0)))
+       (let [resp (.sendTransaction
+                   (:transaction-manager client)
+                   (or gas-price default-gas-price)
+                   (or gas-limit default-gas-limit)
+                   (or to (:coinbase client))
+                   data
+                   (or value (BigInteger/valueOf 0)))]
+         (put! c (if (and resp (.hasError resp))
+                   {:err :bad-transaction}
+                   {:transaction-id (.getTransactionHash resp)})))
        :cljs
        (take!
         (get-transaction-count client)
