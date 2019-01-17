@@ -38,6 +38,9 @@
                 rtm (FastRawTransactionManager. conn creds)]
             (assoc client :transaction-manager rtm))))
 
+#?(:clj (defn get-coinbase-from-private-key [private-key]
+          (.getAddress (Credentials/create private-key))))
+
 (defn get-transaction-count
   [{:keys [client address channel]}]
   (let [c (or channel (chan 1))]
