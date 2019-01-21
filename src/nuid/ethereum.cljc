@@ -98,49 +98,44 @@
  [{:keys [client transaction-id channel]}]
   (let [c (or channel (chan 1))]
     #?(:clj
-       (-> (.ethGetTransactionByHash (:conn client) transaction-id)
-           (.sendAsync)
-           (utils/when-complete
-            (fn [_ tx _]
-              (let [transaction (-> tx .getTransaction (.orElse nil))
-                    err (if transaction nil :bad-transaction-id)]
-                (put!
-                 c
-                 [transaction-id
-                  (if err
-                    {:err err}
-                    {:transaction transaction
-                     :client client})])))))
+       (let [f #(put! c (if % {:transaction %} {:err :bad-transaction-id}))]
+         (-> (.ethGetTransactionByHash
+              (:conn client)
+              transaction-id)
+             (.send)
+             (.getTransaction)
+             (.orElse nil)
+             (f)))
        :cljs
        (.getTransaction
         (.-eth (:conn client))
         transaction-id
-        #(put!
-          c
-          [transaction-id
-           (if %1
-             {:err %1}
-             {:transaction %2
-              :client client})])))
+        #(put! c (if %1 {:err :bad-transaction-id} {:transaction %2}))))
     c))
 
-(defn transaction->channel
-  "Transducer friendly ledger/get-transaction"
-  [client channel transaction-id]
-  (get-transaction {:transaction-id transaction-id
-                    :channel channel
-                    :client client}))
+(defn get-transaction-receipt
+  [{:keys [client transaction-id channel]}]
+  (let [c (or channel (chan 1))]
+    #?(:clj
+       (let [f #(put! c (if % {:transaction-receipt %} {:err :bad-transaction-id}))]
+         (-> (.ethGetTransactionReceipt
+              (:conn client)
+              transaction-id)
+             (.send)
+             (.getTransactionReceipt)
+             (.orElse nil)
+             (f))))
+    c))
 
-(defn decode-channel-result [[transaction-id result]]
-  [transaction-id
-   (if (:transaction result)
-     (decode-transaction result)
-     {:err :invalid})])
+(defn finalized? [{:keys [client transaction-id channel] :as input}]
+  (let [c (or channel (chan 1))]
+    (take!
+     (get-transaction-receipt (dissoc input :channel))
+     #(put! c (contains? % :transaction-receipt)))
+    c))
 
 #?(:cljs (def exports
            #js {:get-transaction-count get-transaction-count
-                :decode-channel-result decode-channel-result
-                :transaction->channel transaction->channel
                 :encode-transaction encode-transaction
                 :decode-transaction decode-transaction
                 :default-gas-price default-gas-price
