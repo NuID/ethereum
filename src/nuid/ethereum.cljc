@@ -4,10 +4,11 @@
    [nuid.utils :as utils]
    [nuid.bn :as bn]
    #?@(:clj
-       [[clojure.core.async :refer [go chan <! put! take!]]]
+       [[clojure.core.async :refer [go chan <! <!! put! take!]]]
        :cljs
        [[cljs.core.async :refer-macros [go] :refer [chan <! put! take!]]
         ["ethereumjs-tx" :as etx]
+        ["keythereum" :as keth]
         ["web3" :as web3]
         ["buffer" :as b]]))
   #?@(:clj
@@ -38,28 +39,36 @@
                 rtm (FastRawTransactionManager. conn creds)]
             (assoc client :transaction-manager rtm))))
 
-#?(:clj (defn get-coinbase-from-private-key [private-key]
-          (.getAddress (Credentials/create private-key))))
+(defn get-coinbase-from-private-key [private-key]
+  #?(:clj (.getAddress (Credentials/create private-key))
+     :cljs (keth/privateKeyToAddress private-key)))
 
 (defn get-transaction-count
-  [{:keys [client address channel]}]
-  (let [c (or channel (chan 1))]
-    #?(:cljs
-       (.getTransactionCount
-        (.-eth (:conn client))
-        (or address (:coinbase client))
-        #(put! c (or %1 %2))))
-    c))
+  [{:keys [client address pending? channel]
+    :or {address (:coinbase client)
+         pending? "pending"
+         channel (chan 1)}}]
+  #?(:cljs
+     (.getTransactionCount
+      (.-eth (:conn client))
+      (or address (:coinbase client))
+      (or pending? "pending")
+      #(put! channel (or %1 %2))))
+  channel)
 
 (defn encode-transaction
-  [{:keys [client nonce gas-price gas-limit to value data]}]
+  [{:keys [client nonce gas-price gas-limit to value data]
+    :or {gas-price default-gas-price
+         gas-limit default-gas-limit
+         to (:coinbase client)
+         value "0x00"}}]
   #?(:cljs
      (let [tx (etx. #js {"nonce" (web3/utils.toHex nonce)
-                         "gasPrice" (or gas-price default-gas-price)
-                         "gasLimit" (or gas-limit default-gas-limit)
-                         "to" (or to (:coinbase client))
-                         "value" (or value "0x00")
-                         "data" (transit/hex-encode data)})]
+                         "data" (transit/hex-encode data)
+                         "gasPrice" gas-price
+                         "gasLimit" gas-limit
+                         "value" value
+                         "to" to})]
        (.sign tx (b/Buffer.from (:private-key client) "hex"))
        (str "0x" (-> tx .serialize (.toString "hex"))))))
 
@@ -70,69 +79,90 @@
       :cljs (.-input transaction))))
 
 (defn send-transaction
-  [{:keys [client gas-price gas-limit to value data channel]
+  [{:keys [client gas-price gas-limit to data value channel]
+    :or {gas-price default-gas-price
+         gas-limit default-gas-limit
+         to (:coinbase client)
+         value (BigInteger/valueOf 0)
+         channel (chan 1)}
     :as transaction}]
-  (let [c (or channel (chan 1))]
-    #?(:clj
-       (let [resp (.sendTransaction
-                   (:transaction-manager client)
-                   (or gas-price default-gas-price)
-                   (or gas-limit default-gas-limit)
-                   (or to (:coinbase client))
-                   data
-                   (or value (BigInteger/valueOf 0)))]
-         (put! c (if (and resp (.hasError resp))
-                   {:err :bad-transaction}
-                   {:transaction-id (.getTransactionHash resp)})))
-       :cljs
-       (take!
-        (get-transaction-count client)
-        (fn [nonce]
-          (.sendSignedTransaction
-           (.-eth (:conn client))
-           (encode-transaction (assoc transaction :nonce nonce))
-           #(put! c (if %1 {:err %1} {:transaction-id %2}))))))
-    c))
+  #?(:clj
+     (let [tm (:transaction-manager client)
+           raw (.sendTransaction tm gas-price gas-limit to data value)
+           resp (if (and raw (.hasError raw))
+                  {:err (.getMessage (.getError raw))}
+                  {:transaction-id (.getTransactionHash raw)})]
+       (put! channel resp))
+     :cljs
+     (take!
+      (get-transaction-count transaction)
+      (fn [nonce]
+        (.sendSignedTransaction
+         (.-eth (:conn client))
+         (encode-transaction (assoc transaction :nonce nonce))
+         #(put! channel (if %1 {:err %1} {:transaction-id %2}))))))
+  channel)
+
+#?(:clj (defn retry? [{:keys [err]}]
+          (and err (or (= err "replacement transaction underpriced")
+                       (= err "nonce too low")))))
+
+#?(:clj (defn send-transaction-with-retry-nonces
+          [{:keys [transaction nonces] :or {nonces 100} :as opts}]
+          (if (> nonces 0)
+            (let [resp (<!! (send-transaction transaction))]
+              (if (retry? resp)
+                (recur (assoc opts :nonces (dec nonces)))
+                resp))
+            {:err "too many retries"})))
+
+#?(:clj (defn reset? [{:keys [err]}]
+          (and err (= err "too many retries"))))
+
+#?(:clj (defn send-transaction-with-reset-nonce
+          [{:keys [transaction resets] :or {resets 10} :as opts}]
+          (if (> resets 0)
+            (let [resp (send-transaction-with-retry-nonces opts)]
+              (if (reset? resp)
+                (recur (assoc opts :resets (dec resets)))
+                resp))
+            {:err "too many resets"})))
 
 (defn get-transaction
- [{:keys [client transaction-id channel]}]
-  (let [c (or channel (chan 1))]
-    #?(:clj
-       (let [f #(put! c (if % {:transaction %} {:err :bad-transaction-id}))]
-         (-> (.ethGetTransactionByHash
-              (:conn client)
-              transaction-id)
-             (.send)
-             (.getTransaction)
-             (.orElse nil)
-             (f)))
-       :cljs
-       (.getTransaction
-        (.-eth (:conn client))
-        transaction-id
-        #(put! c (if %1 {:err :bad-transaction-id} {:transaction %2}))))
-    c))
+  [{:keys [client transaction-id channel]
+    :or {channel (chan 1)}}]
+  #?(:clj
+     (let [resp (-> (.ethGetTransactionByHash (:conn client) transaction-id)
+                    (.send)
+                    (.getTransaction)
+                    (.orElse nil))]
+       (put! channel (if resp {:transaction resp} {:err :not-found})))
+     :cljs
+     (.getTransaction
+      (.-eth (:conn client))
+      transaction-id
+      #(put! channel (if %1 {:err :not-found} {:transaction %2}))))
+  channel)
 
 (defn get-transaction-receipt
-  [{:keys [client transaction-id channel]}]
-  (let [c (or channel (chan 1))]
-    #?(:clj
-       (let [f #(put! c (if % {:transaction-receipt %} {:err :bad-transaction-id}))]
-         (-> (.ethGetTransactionReceipt
-              (:conn client)
-              transaction-id)
-             (.send)
-             (.getTransactionReceipt)
-             (.orElse nil)
-             (f))))
-    c))
+  [{:keys [client transaction-id channel]
+    :or {channel (chan 1)}}]
+  #?(:clj
+     (let [resp (-> (.ethGetTransactionReceipt (:conn client) transaction-id)
+                    (.send)
+                    (.getTransactionReceipt)
+                    (.orElse nil))]
+       (put! channel (if resp {:transaction-receipt resp} {:err :not-found}))))
+  channel)
 
-(defn finalized? [{:keys [client transaction-id channel] :as input}]
-  (let [c (or channel (chan 1))]
-    (take!
-     (get-transaction-receipt (dissoc input :channel))
-     #(put! c (contains? % :transaction-receipt)))
-    c))
+(defn finalized?
+  [{:keys [client transaction-id channel]
+    :or {channel (chan 1)}
+    :as input}]
+  (take!
+   (get-transaction-receipt (dissoc input :channel))
+   #(put! channel (contains? % :transaction-receipt)))
+  channel)
 
 #?(:cljs (def exports
            #js {:get-transaction-count get-transaction-count
