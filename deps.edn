@@ -1,18 +1,21 @@
 {:deps
  {nuid/transit
   {:git/url "git@github.com:nuid/transit",
-   :sha "5d231d49df40af6e6d8cbc0c98a055b81da2ab4e"},
+   :sha "e777c2094752a6b2b42d617a174cd6c26d7ad4e9"},
   nuid/utils
   {:git/url "git@github.com:nuid/utils",
-   :sha "3f62ca0293543f09227ac1f05a2aa8d64488fcd4"},
+   :sha "678977f63fc52a76a768b3db671e41c1a41efcc4"},
   nuid/bn
   {:git/url "git@github.com:nuid/bn",
-   :sha "e2d999f9108e68c1f518c21d4ad129b39e477ca6"},
+   :sha "bdc048c25a0c9ec933f3da01961107612251485e"},
   org.clojure/clojurescript {:mvn/version "1.10.520"},
   org.clojure/core.async {:mvn/version "0.4.474"},
   org.clojure/clojure {:mvn/version "1.10.0"},
   org.web3j/core {:mvn/version "4.1.0"}},
  :aliases
- {:cambada
-  {:extra-deps {luchiniatwork/cambada {:mvn/version "1.0.0"}}}},
+ {:repl
+  {:extra-deps
+   {nuid/repl
+    {:git/url "git@github.com:nuid/repl",
+     :sha "4e6d77e2419b38b1e913b1cba65b23fe3c123b52"}}}},
  :paths ["src"]}
