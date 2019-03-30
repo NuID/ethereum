@@ -1,13 +1,13 @@
 {:deps
  {nuid/transit
   {:git/url "git@github.com:nuid/transit.git",
-   :sha "d8cecee5d06eaaefe4f120694ccb076d8aa54454"},
+   :sha "adc8727b41c5c8ccca6ac59487ffbff811096084"},
   nuid/utils
   {:git/url "git@github.com:nuid/utils.git",
-   :sha "af4c91b812fcfe89509c574bbcb243ef640194ef"},
+   :sha "9b5a2e36fed7f3fe614446961da086ba5688efda"},
   nuid/bn
   {:git/url "git@github.com:nuid/bn.git",
-   :sha "ddc51b3d680073ab3101a19175cd0e5aa4aa5b17"},
+   :sha "760b472a8f63fbdb97ca79be49933249a7b3af62"},
   org.clojure/clojurescript {:mvn/version "1.10.520"},
   org.clojure/core.async {:mvn/version "0.4.474"},
   org.clojure/clojure {:mvn/version "1.10.0"},
@@ -17,5 +17,5 @@
   {:extra-deps
    {nuid/deps
     {:git/url "git@github.com:nuid/deps.git",
-     :sha "c4846a81e4b491b6ce73d71e2f43c360301d65cb"}}}},
+     :sha "8a32571147caf3c58d89293848d244cc6733d1f7"}}}},
  :paths ["src"]}
