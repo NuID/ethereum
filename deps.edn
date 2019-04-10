@@ -1,21 +1,29 @@
 {:deps
- {nuid/transit
-  {:git/url "git@github.com:nuid/transit.git",
-   :sha "adc8727b41c5c8ccca6ac59487ffbff811096084"},
-  nuid/utils
-  {:git/url "git@github.com:nuid/utils.git",
-   :sha "9b5a2e36fed7f3fe614446961da086ba5688efda"},
+ {nuid/hex
+  {:git/url "https://github.com/nuid/hex.git",
+   :sha "8e2bb4dc0408b0ff21f48f47bfab678c6d86db8b"},
   nuid/bn
-  {:git/url "git@github.com:nuid/bn.git",
-   :sha "760b472a8f63fbdb97ca79be49933249a7b3af62"},
+  {:git/url "https://github.com/nuid/bn.git",
+   :sha "da2c1443ec1bce47892cf503e996770d9498931d"},
   org.clojure/clojurescript {:mvn/version "1.10.520"},
   org.clojure/core.async {:mvn/version "0.4.474"},
   org.clojure/clojure {:mvn/version "1.10.0"},
   org.web3j/core {:mvn/version "4.1.0"}},
  :aliases
- {:repl
+ {:cljfmt
+  {:extra-deps
+   {com.jameslaverack/cljfmt-runner
+    {:git/url "https://github.com/JamesLaverack/cljfmt-runner",
+     :sha "97960e9a6464935534b5a6bab529e063d0027128"}},
+   :main-opts ["-m" "cljfmt-runner.check"]},
+  :cljfmt/fix {:main-opts ["-m" "cljfmt-runner.fix"]},
+  :depot
+  {:extra-deps {olical/depot {:mvn/version "1.8.2"}},
+   :main-opts ["-m" "depot.outdated.main"]},
+  :depot/update {:main-opts ["-m" "depot.outdated.main --update"]},
+  :repl
   {:extra-deps
    {nuid/deps
-    {:git/url "git@github.com:nuid/deps.git",
-     :sha "8a32571147caf3c58d89293848d244cc6733d1f7"}}}},
+    {:git/url "https://github.com/nuid/deps.git",
+     :sha "ab2f5d33c6c72ff2dc7c13fc5da0bee717951818"}}}},
  :paths ["src"]}
