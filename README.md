@@ -6,7 +6,7 @@ Cross-platform Ethereum API.
 
 `nuid.ethereum` primarily exists to abstract over platform-specific differences and provide a common interface to the provided functionality across host platforms. `nuid.ethereum` delegates most invocations to a host implemention (e.g. `web3j` on the `jvm`, and `web3js`, etc. in `node` and the browser). This library inherits both dependencies' capability to interact with a remote service such as [infura](https://infura.io/).
 
-Top-level functionality (e.g. `nuid.ethereum/make-connection`, `nuid.ethereum/send-transaction`, `nuid.ethereum/get-transaction`, etc.) are implemented with a consistent interface, more work is necessary to simplify and expose a consistent API across hosts platforms. Existing inconsistencies are primarily caused by nonce management differences and utilites in `web3j` vs `web3js`.
+Top-level functionality (e.g. `nuid.ethereum/client`, `nuid.ethereum.transaction/send`, `nuid.ethereum.transaction/get`, etc.) are implemented with a consistent interface, more work is necessary to simplify and expose a consistent API across hosts platforms. Existing inconsistencies are primarily caused by nonce management differences and utilites in `web3j` vs `web3js`.
 
 ## Requirements
 
