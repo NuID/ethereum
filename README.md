@@ -4,7 +4,7 @@ Cross-platform Ethereum API.
 
 ## Notes
 
-`nuid.ethereum` primarily exists to abstract over platform-specific differences and provide a common interface to the provided functionality across host platforms. `nuid.ethereum` delegates most invocations to a host implemention (e.g. `web3j` on the `jvm`, and `web3js`, etc. in `node` and the browser). This library inherits both dependencies' capability to interact with a remote service such as [infura](https://infura.io/).
+`nuid.ethereum` primarily exists to abstract over platform-specific differences and provide a common interface to the provided functionality across host platforms. `nuid.ethereum` delegates most invocations to a host implemention (e.g. `web3j` on the `jvm`, and `web3js`, etc. in `node` and the browser). This library inherits both dependencies' capability to interact with a remote service such as [Infura](https://infura.io/).
 
 While top-level functionality (e.g. `nuid.ethereum/client`, `nuid.ethereum.transaction/send`, `nuid.ethereum.transaction/get`, etc.) are consistent across platforms, there remain host idiosyncrasies in how nonces and transactions are managed and signed.
 
@@ -16,7 +16,7 @@ While top-level functionality (e.g. `nuid.ethereum/client`, `nuid.ethereum.trans
 
 ### tools.deps:
 
-`{nuid/ethereum {:git/url "https://github.com/nuid/ethereum" :sha "..."}`
+`{nuid/ethereum {:git/url "https://github.com/nuid/ethereum" :sha "..."}}`
 
 ### usage:
 

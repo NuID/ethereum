@@ -1,41 +1,66 @@
 (ns nuid.ethereum
+  (:require
+   [nuid.ethereum.transaction :as tx]
+   [nuid.credential :as credential]
+   [nuid.hex :as hex]
+   #?@(:clj [[clojure.core.async :as async]]
+       :cljs [[cljs.core.async :as async :include-macros true]
+              ["Web3" :as Web3]]))
   #?@(:clj
       [(:import
         (org.web3j.protocol http.HttpService Web3j)
         (org.web3j.tx FastRawTransactionManager)
-        (org.web3j.crypto Credentials))])
-  #?@(:cljs
-      [(:require
-        ["keythereum" :as keth]
-        ["bn.js" :as bnjs]
-        ["Web3" :as Web3])]))
+        (org.web3j.crypto Credentials))]))
 
-(def default-gas-price #?(:clj (BigInteger/valueOf 22000000000)
-                          :cljs (bnjs. "22000000000")))
+(defprotocol Client
+  (send-transaction        [client opts])
+  (get-transaction-by-hash [client opts])
+  (get-transaction-receipt [client opts]))
 
-(def default-gas-limit #?(:clj (BigInteger/valueOf 4300000)
-                          :cljs (bnjs. "4300000")))
+(defn- t [client {:keys [credential.data/transit]}]
+  (let [d {:data (hex/prefixed (hex/encode transit))}]
+    (async/go (let [{:keys [ethereum/transaction-id]}
+                    (async/<! (send-transaction client d))]
+                {:store.ethereum/id transaction-id}))))
 
-(def default-value #?(:clj (BigInteger/valueOf 0) :cljs "0x00"))
+(defn- q [client {:keys [store.ethereum/id]}]
+  (let [q {:ethereum/transaction-id id}]
+    (get-transaction-by-hash client q)))
 
-(defn connection [{:keys [ethereum/http-provider] :as config}]
-  (let [conn #?(:clj (Web3j/build (HttpService. http-provider))
-                :cljs (Web3. http-provider))]
-    (assoc config :ethereum/connection conn)))
+#?(:clj
+   (defn client [{:keys [ethereum/http-provider ethereum/private-key]}]
+     (let [c (Web3j/build (HttpService. http-provider))
+           tm (FastRawTransactionManager. c (Credentials/create private-key))
+           conn #:ethereum{:connection c :transaction-manager tm}]
+       (reify
+         Client
+         (send-transaction        [_ opts] (tx/send-with-reset conn opts))
+         (get-transaction-by-hash [_ opts] (tx/get-by-hash conn opts))
+         (get-transaction-receipt [_ opts] (tx/receipt conn opts))
 
-#?(:clj (defn fast-raw-transaction-manager
-          [{:keys [ethereum/connection ethereum/private-key] :as client}]
-          (let [creds (Credentials/create private-key)
-                rtm (FastRawTransactionManager. connection creds)]
-            (assoc client :ethereum/transaction-manager rtm))))
+         credential/Store
+         (transact [client opts] (t client opts))
+         (query    [client opts] (q client opts))))))
 
-(defn client [config]
-  (let [conn (connection config)]
-    #?(:clj (fast-raw-transaction-manager conn)
-       :cljs conn)))
+#?(:cljs
+   (defn client [{:keys [ethereum/http-provider ethereum/private-key]}]
+     (let [c (Web3. http-provider)
+           pk (hex/prefixed private-key)
+           cb (.. c -eth -accounts (privateKeyToAccount pk) -address)
+           conn #:ethereum{:connection c :private-key pk :coinbase cb}]
+       (reify
+         Client
+         (send-transaction        [_ opts] (tx/send conn opts))
+         (get-transaction-by-hash [_ opts] (tx/get-by-hash conn opts))
+         (get-transaction-receipt [_ opts] (tx/receipt conn opts))
 
-#?(:cljs (def exports #js {:defaultGasPrice default-gas-price
-                           :defaultGasLimit default-gas-limit
-                           :defaultValue default-value
-                           :connection connection
-                           :client client}))
+         credential/Store
+         (transact [client opts] (t client opts))
+         (query    [client opts] (q client opts))))))
+
+#?(:cljs
+   (def exports
+     #js {:getTransactionReceipt get-transaction-receipt
+          :getTransactionByHash get-transaction-by-hash
+          :sendTransaction send-transaction
+          :client client}))

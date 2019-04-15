@@ -1,110 +1,166 @@
 (ns nuid.ethereum.transaction
   (:require
-   [nuid.ethereum.address :as addr]
-   [nuid.ethereum :as eth]
+   [nuid.elliptic.curve.point :as point]
+   [nuid.credential :as credential]
+   [nuid.transit :as transit]
    [nuid.hex :as hex]
    [nuid.bn :as bn]
-   #?@(:clj
-       [[clojure.core.async :as async]]
-       :cljs
-       [[cljs.core.async :as async]
-        ["ethereumjs-tx" :as etx]]))
-  (:refer-clojure :exclude [send get]))
+   #?@(:clj [[clojure.core.async :as async]]
+       :cljs [[cljs.core.async :as async]]))
+  #?@(:clj
+      [(:import
+        (org.web3j.protocol.core.methods.response Transaction))])
+  (:refer-clojure :exclude [send]))
 
-#?(:cljs (defn sign [client {:keys [nonce gas-price gas-limit to value data]
-                             :or {gas-price eth/default-gas-price
-                                  gas-limit eth/default-gas-limit
-                                  to (:ethereum/coinbase client)
-                                  value eth/default-value}}]
-           (let [t (etx. #js {"gasPrice" gas-price
-                              "gasLimit" gas-limit
-                              "value" value
-                              "nonce" nonce
-                              "data" data
-                              "to" to})]
-             (.sign t (hex/decode (:ethereum/private-key client)))
-             (.serialize t))))
+(def default-gas-price (bn/from "22000000000"))
+(def default-gas-limit (bn/from "4300000"))
+(def default-value (bn/from "0"))
 
-(defn send [client {:keys [gas-price gas-limit to data value channel]
-                    :or {gas-price eth/default-gas-price
-                         gas-limit eth/default-gas-limit
-                         to (:ethereum/coinbase client)
-                         value eth/default-value
-                         channel (async/chan)}
-                    :as transaction}]
-  #?(:clj (let [tm (:ethereum/transaction-manager client)
-                raw (.sendTransaction tm gas-price gas-limit to data value)
-                resp (if (and raw (.hasError raw))
-                       {:err (.getMessage (.getError raw))}
-                       {:ethereum/transaction-id (.getTransactionHash raw)})]
-            (async/put! channel resp))
-     :cljs (async/take!
-            (addr/transaction-count client)
-            (fn [nonce]
-              (let [conn (.-eth (:ethereum/connection client))
-                    nonce (str "0x" (bn/str (bn/from nonce) 16))
-                    raw (assoc transaction :nonce nonce)
-                    tx (str "0x" (hex/encode (sign client raw)))
-                    f #(async/put!
-                        channel
-                        (if %1
-                          {:err %1}
-                          {:ethereum/transaction-id %2}))]
-                (.sendSignedTransaction conn tx f)))))
-  channel)
+(def read-handlers (merge bn/read-handler point/read-handler))
+(def write-handlers (merge bn/write-handler point/write-handler))
+(def parse (comp (partial transit/read {:handlers read-handlers}) hex/str))
 
-#?(:clj (defn retry? [{:keys [err]}]
-          (and err (or (= err "replacement transaction underpriced")
-                       (= err "nonce too low")))))
+#?(:clj
+   (defn send
+     [{:keys [ethereum/transaction-manager]}
+      {:keys [data gas-price gas-limit to value channel]
+       :or {gas-price default-gas-price
+            gas-limit default-gas-limit
+            to (.getFromAddress transaction-manager)
+            value default-value
+            channel (async/chan)}}]
+     (let [tx (.sendTransaction transaction-manager gas-price gas-limit to data value)
+           v (or (and tx (.hasError tx) {:err (.getMessage (.getError tx))})
+                 {:ethereum/transaction-id (.getTransactionHash tx)})]
+       (async/put! channel v)
+       channel)))
 
-#?(:clj (defn send-with-retry
-          [client {:keys [retries] :or {retries 50} :as opts}]
-          (if (> retries 0)
-            (let [resp (async/<!! (send client opts))]
-              (if (retry? resp)
-                (recur client (assoc opts :retries (dec retries)))
-                resp))
-            {:err "too many retries"})))
+#?(:clj (def replace-error "replacement transaction underpriced"))
+#?(:clj (def nonce-error "nonce too low"))
+#?(:clj (def retry-error "too many retries"))
+#?(:clj (def reset-error "too many resets"))
 
-#?(:clj (defn reset? [{:keys [err]}]
-          (and err (= err "too many retries"))))
+#?(:clj
+   (defn retry? [{:keys [err]}]
+     (and err (or (= err replace-error)
+                  (= err nonce-error)))))
 
-#?(:clj (defn send-with-reset
-          [client {:keys [resets] :or {resets 20} :as opts}]
-          (if (> resets 0)
-            (let [resp (send-with-retry client opts)]
-              (if (reset? resp)
-                (do (.resetNonce (:ethereum/transaction-manager client))
-                    (recur client (assoc opts :resets (dec resets))))
-                resp))
-            {:err "too many resets"})))
+#?(:clj
+   (defn send-with-retry
+     [client {:keys [retries] :or {retries 50} :as opts}]
+     (async/go-loop [rs retries]
+       (if (> rs 0)
+         (let [resp (async/<! (send client opts))]
+           (if (retry? resp)
+             (recur (update opts :retries dec))
+             resp))
+         {:err retry-error}))))
 
-(defn get [client {:keys [ethereum/transaction-id channel] :or {channel (async/chan)}}]
-  #?(:clj (let [resp (-> (.ethGetTransactionByHash (:ethereum/connection client) transaction-id)
-                         (.send)
-                         (.getTransaction)
-                         (.orElse nil))]
-            (async/put! channel (if resp {:ethereum/transaction resp} {:err :not-found})))
-     :cljs (let [f #(async/put! channel (if %1 {:err :not-found} {:ethereum/transaction %2}))
-                 conn (.-eth (:ethereum/connection client))]
-             (.getTransaction conn transaction-id f)))
-  channel)
+#?(:clj
+   (defn reset? [{:keys [err]}]
+     (and err (= err retry-error))))
 
-(defn input [{:keys [ethereum/transaction]}]
-  #?(:clj (.getInput transaction)
-     :cljs (.-input transaction)))
+#?(:clj
+   (defn send-with-reset
+     [{:keys [ethereum/transaction-manager] :as client}
+      {:keys [resets] :or {resets 20} :as opts}]
+     (async/go-loop [rs resets]
+       (if (> rs 0)
+         (let [resp (async/<! (send-with-retry client opts))]
+           (if (reset? resp)
+             (do (.resetNonce transaction-manager)
+                 (recur (update opts :resets dec)))
+             resp))
+         {:err reset-error}))))
 
-#?(:clj (defn receipt [client {:keys [ethereum/transaction-id channel] :or {channel (async/chan)}}]
-          (let [resp (-> (.ethGetTransactionReceipt (:ethereum/connection client) transaction-id)
-                         (.send)
-                         (.getTransactionReceipt)
-                         (.orElse nil))]
-            (async/put! channel (if resp {:transaction-receipt resp} {:err :not-found})))
-          channel))
+#?(:clj
+   (defn get-by-hash
+     [{:keys [ethereum/connection]}
+      {:keys [ethereum/transaction-id channel] :or {channel (async/chan)}}]
+     (let [tx (-> (.ethGetTransactionByHash connection transaction-id)
+                  (.send)
+                  (.getTransaction)
+                  (.orElse nil))]
+       (async/put! channel (or tx {:err :not-found}))
+       channel)))
 
-#?(:clj (defn finalized? [client {:keys [channel] :or {channel (async/chan)} :as input}]
-          (let [f #(async/put! channel (contains? % :transaction-receipt))]
-            (async/take! (receipt (dissoc input :channel) f))
-            channel)))
+#?(:clj
+   (defn receipt
+     [{:keys [ethereum/connection]}
+      {:keys [ethereum/transaction-id channel] :or {channel (async/chan)}}]
+     (let [v (-> (.ethGetTransactionReceipt connection transaction-id)
+                 (.send)
+                 (.getTransactionReceipt)
+                 (.orElse nil))]
+       (async/put! channel (or v {:err :not-found}))
+       channel)))
 
-#?(:cljs (def exports #js {:input input :send send :sign sign :get get}))
+#?(:cljs
+   (defn send
+     [{:keys [ethereum/coinbase ethereum/connection ethereum/private-key]}
+      {:keys [data gas-price gas-limit to value channel]
+       :or {gas-price default-gas-price
+            gas-limit default-gas-limit
+            to coinbase
+            value default-value
+            channel (async/chan)}}]
+     (let [tx #js {"gas" gas-limit "to" to "data" data}]
+       (-> (.signTransaction (.-accounts (.-eth connection)) tx private-key)
+           (.then
+            #(.sendSignedTransaction
+              (.-eth connection)
+              (.-rawTransaction %)
+              (fn [err id]
+                (let [v (if err {:err err} {:ethereum/transaction-id id})]
+                  (async/put! channel v)))))
+           (.catch #(async/put! channel {:err %})))
+       channel)))
+
+#?(:cljs
+   (defn get-by-hash
+     [{:keys [ethereum/connection]}
+      {:keys [ethereum/transaction-id channel]
+       :or {channel (async/chan)}}]
+     (.getTransaction
+      (.-eth connection)
+      transaction-id
+      #(async/put! channel (or %2 {:err :not-found})))
+     channel))
+
+#?(:cljs
+   (defn receipt
+     [{:keys [ethereum/connection]}
+      {:keys [ethereum/transaction-id channel]
+       :or {channel (async/chan)}}]
+     (.getTransactionReceipt
+      (.-eth connection)
+      transaction-id
+      #(async/put! channel (or %2 {:err :not-found})))
+     channel))
+
+(defn- get-input [x]
+  #?(:clj (.getInput x) :cljs (.-input x)))
+
+(extend-type #?(:clj Transaction :cljs object)
+  credential/Credentialable
+  (parse
+    ([x _] (credential/parse x))
+    ([x]   (parse (get-input x))))
+  (coerce
+    ([x _] (credential/coerce x))
+    ([x]   (credential/coerce*
+            (credential/parse x))))
+  (from
+    ([x _] (credential/from x))
+    ([x]   (credential/coerce x)))
+
+  credential/Credential
+  (proof [c opts]
+    (credential/proof*
+     (merge (credential/from c) opts)))
+  (verify [c opts]
+    (credential/verify*
+     (merge (credential/from c) opts))))
+
+#?(:cljs
+   (def exports #js {:getByHash get-by-hash :receipt receipt :send send}))
