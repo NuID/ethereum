@@ -47,6 +47,10 @@ $ clj # or shadow-cljs node-repl
 
 This library is a reduced API for interacting with Ethereum via a consistent interface across platforms (`clj` and `cljs`). Convenience from other languages is not a high priority, since using the host libraries directly will likely be preferable.
 
+## Licensing
+
+Apache v2.0 or MIT
+
 ## Contributing
 
 Install [`git-hooks`](https://github.com/icefox/git-hooks) and fire away. Make sure not to get bitten by [`externs`](https://clojurescript.org/guides/externs) if modifying `npm` dependencies.
