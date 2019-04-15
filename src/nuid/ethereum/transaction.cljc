@@ -138,7 +138,7 @@
       #(async/put! channel (or %2 {:err :not-found})))
      channel))
 
-(defn- get-input [x]
+(defn get-input [x]
   #?(:clj (.getInput x) :cljs (.-input x)))
 
 (extend-type #?(:clj Transaction :cljs object)

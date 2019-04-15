@@ -30,19 +30,17 @@ $ clj # or shadow-cljs node-repl
 => (require '[nuid.hex :as hex])
 => (def http-provider "...") ;; e.g. https://rinkeby.infura.io/...
 => (def private-key "...")
-=> (def coinbase (addr/from-private-key private-key))
 => (def config #:ethereum{:http-provider http-provider
-                          :private-key private-key
-                          :coinbase coinbase})
+                          :private-key private-key})
 => (def client (eth/client config))
 => (def resp (atom nil))
 => (def data (str "0x" (hex/encode "blockchain! 🤡")))
-=> (async/take! (addr/transaction-count client) prn)
-=> (async/take! (tx/send client {:data data}) (partial reset! resp))
+=> (async/take! (eth/send-transaction client {:data data})
+                (partial reset! resp))
 ;; finalizing ...
-=> (async/take! (addr/transaction-count client) prn)
-=> (async/take! (tx/get client @resp) (partial reset! resp))
-=> (bytes/to (hex/decode (tx/input @resp))) ;; => "blockchain! 🤡"
+=> (async/take! (eth/get-transaction-by-hash client @resp)
+                (partial reset! resp))
+=> (bytes/str (hex/decode (tx/get-input @resp))) ;; => "blockchain! 🤡"
 ```
 
 ## Note
