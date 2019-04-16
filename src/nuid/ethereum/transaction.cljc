@@ -52,7 +52,7 @@
        (if (> rs 0)
          (let [resp (async/<! (send client opts))]
            (if (retry? resp)
-             (recur (update opts :retries dec))
+             (recur (assoc opts :retries (dec retries)))
              resp))
          {:err retry-error}))))
 
@@ -69,7 +69,7 @@
          (let [resp (async/<! (send-with-retry client opts))]
            (if (reset? resp)
              (do (.resetNonce transaction-manager)
-                 (recur (update opts :resets dec)))
+                 (recur (assoc opts :resets (dec resets))))
              resp))
          {:err reset-error}))))
 
