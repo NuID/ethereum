@@ -16,8 +16,10 @@
 (def default-gas-limit (bn/from "4300000"))
 (def default-value (bn/from "0"))
 
-(def read-handlers (merge bn/read-handler point/read-handler))
-(def write-handlers (merge bn/write-handler point/write-handler))
+(def read-handlers (merge point/transit-read-handler
+                          bn/transit-read-handler))
+(def write-handlers (merge point/transit-write-handler
+                           bn/transit-write-handler))
 (def parse (comp (partial transit/read {:handlers read-handlers}) hex/str))
 
 #?(:clj
@@ -41,7 +43,8 @@
 #?(:clj (def reset-error "too many resets"))
 
 #?(:clj
-   (defn retry? [{:keys [err]}]
+   (defn retry?
+     [{:keys [err]}]
      (and err (or (= err replace-error)
                   (= err nonce-error)))))
 
@@ -57,7 +60,8 @@
          {:err retry-error}))))
 
 #?(:clj
-   (defn reset? [{:keys [err]}]
+   (defn reset?
+     [{:keys [err]}]
      (and err (= err retry-error))))
 
 #?(:clj
@@ -138,7 +142,8 @@
       #(async/put! channel (or %2 {:err :not-found})))
      channel))
 
-(defn get-input [x]
+(defn get-input
+  [x]
   #?(:clj (.getInput x) :cljs (.-input x)))
 
 (extend-type #?(:clj Transaction :cljs object)

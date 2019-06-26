@@ -17,18 +17,21 @@
   (get-transaction-by-hash [client opts])
   (get-transaction-receipt [client opts]))
 
-(defn- t [client {:keys [credential.data/transit]}]
+(defn- t
+  [client {:keys [credential.data/transit]}]
   (let [d {:data (hex/prefixed (hex/encode transit))}]
     (async/go (let [{:keys [ethereum/transaction-id]}
                     (async/<! (send-transaction client d))]
                 {:store.ethereum/id transaction-id}))))
 
-(defn- q [client {:keys [store.ethereum/id]}]
+(defn- q
+  [client {:keys [store.ethereum/id]}]
   (let [q {:ethereum/transaction-id id}]
     (get-transaction-by-hash client q)))
 
 #?(:clj
-   (defn client [{:keys [ethereum/http-provider ethereum/private-key]}]
+   (defn client
+     [{:keys [ethereum/http-provider ethereum/private-key]}]
      (let [c (Web3j/build (HttpService. http-provider))
            tm (FastRawTransactionManager. c (Credentials/create private-key))
            conn #:ethereum{:connection c :transaction-manager tm}]
@@ -43,7 +46,8 @@
          (query    [client opts] (q client opts))))))
 
 #?(:cljs
-   (defn client [{:keys [ethereum/http-provider ethereum/private-key]}]
+   (defn client
+     [{:keys [ethereum/http-provider ethereum/private-key]}]
      (let [c (Web3. http-provider)
            pk (hex/prefixed private-key)
            cb (.. c -eth -accounts (privateKeyToAccount pk) -address)
