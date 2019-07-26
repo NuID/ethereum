@@ -8,4 +8,4 @@
   {:output-to "target/node/nuid_ethereum.js",
    :exports-var nuid.ethereum/exports,
    :target :node-library}},
- :deps {:aliases []}}
+ :deps {:aliases [:shadow]}}
