@@ -1,13 +1,13 @@
 {:deps
  {nuid/credential
   {:git/url "https://github.com/nuid/credential.git",
-   :sha "b4336c19ff52e49d5bbea3950995f537e97189b6"},
+   :sha "1245ce7f6797b6436533b43fba29715858246c09"},
   nuid/hex
   {:git/url "https://github.com/nuid/hex.git",
-   :sha "b93186ec6a41cf14711102a28c01ee5a6f6f05a3"},
+   :sha "7d19d4cebf04079ba1344909af493af2807a29db"},
   nuid/bn
   {:git/url "https://github.com/nuid/bn.git",
-   :sha "051605abb0f56a09bcf11d3dd94e596559aed279"},
+   :sha "daead7eb14f29ed8e2b4a780904e0aeb5aef62f0"},
   org.clojure/clojurescript {:mvn/version "1.10.520"},
   org.clojure/core.async {:mvn/version "0.4.500"},
   org.clojure/clojure {:mvn/version "1.10.1"},
@@ -29,5 +29,5 @@
   {:extra-deps
    {nuid/deps
     {:git/url "https://github.com/nuid/deps.git",
-     :sha "168230c31b8b38168377cc177b39a2d87b67ed1f"}}}},
+     :sha "6af0c2207e7b4bd4e0efc369ed69ab65f8e1cd74"}}}},
  :paths ["src"]}
