@@ -1,26 +1,19 @@
 (ns nuid.ethereum.transaction
+  (:refer-clojure :exclude [send])
   (:require
-   [nuid.elliptic.curve.point :as point]
-   [nuid.credential :as credential]
-   [nuid.transit :as transit]
    [nuid.hex :as hex]
    [nuid.bn :as bn]
-   #?@(:clj [[clojure.core.async :as async]]
-       :cljs [[cljs.core.async :as async]]))
+   #?@(:clj
+       [[clojure.core.async :as async]]
+       :cljs
+       [[cljs.core.async :as async]]))
   #?@(:clj
       [(:import
-        (org.web3j.protocol.core.methods.response Transaction))])
-  (:refer-clojure :exclude [send]))
+        (org.web3j.protocol.core.methods.response Transaction))]))
 
 (def default-gas-price (bn/from "22000000000"))
 (def default-gas-limit (bn/from "4300000"))
 (def default-value (bn/from "0"))
-
-(def read-handlers (merge point/transit-read-handler
-                          bn/transit-read-handler))
-(def write-handlers (merge point/transit-write-handler
-                           bn/transit-write-handler))
-(def parse (comp (partial transit/read {:handlers read-handlers}) hex/str))
 
 #?(:clj
    (defn send
@@ -144,28 +137,7 @@
 
 (defn get-input
   [x]
-  #?(:clj (.getInput x) :cljs (.-input x)))
+  #?(:clj (.getInput x)
+     :cljs (.-input x)))
 
-(extend-type #?(:clj Transaction :cljs object)
-  credential/Credentialable
-  (parse
-    ([x _] (credential/parse x))
-    ([x]   (parse (get-input x))))
-  (coerce
-    ([x _] (credential/coerce x))
-    ([x]   (credential/coerce*
-            (credential/parse x))))
-  (from
-    ([x _] (credential/from x))
-    ([x]   (credential/coerce x)))
-
-  credential/Credential
-  (proof [c opts]
-    (credential/proof*
-     (merge (credential/from c) opts)))
-  (verify [c opts]
-    (credential/verify*
-     (merge (credential/from c) opts))))
-
-#?(:cljs
-   (def exports #js {:getByHash get-by-hash :receipt receipt :send send}))
+#?(:cljs (def exports #js {}))
