@@ -4,10 +4,10 @@
   org.clojure/clojure {:mvn/version "1.10.1"},
   nuid/hex
   {:git/url "https://github.com/nuid/hex.git",
-   :sha "2e1be0e9781c05cba54ade682703ea5bc2295504"},
+   :sha "13b8fc6bcccfea7b95286d2edbabb68cc334a321"},
   nuid/bn
   {:git/url "https://github.com/nuid/bn.git",
-   :sha "2451617a02e8fae11f700b968d6127b969c7f399"},
+   :sha "b7acffeeca6c6190e7a2bd6c618371884877b11a"},
   org.web3j/core {:mvn/version "4.5.5"}},
  :aliases
  {:cljfmt
@@ -26,5 +26,5 @@
   {:extra-deps
    {nuid/deps
     {:git/url "https://github.com/nuid/deps.git",
-     :sha "e45cfbec3884a63387e13cdb163c41fd3c3e861b"}}}},
+     :sha "f1b21065a56ceae418cc124691a74d0ff5395c68"}}}},
  :paths ["src"]}
