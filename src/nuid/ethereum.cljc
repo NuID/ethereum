@@ -21,8 +21,8 @@
 #?(:clj
    (defn client
      [{:keys [ethereum/http-provider ethereum/private-key]}]
-     (let [c (Web3j/build (HttpService. http-provider))
-           tm (FastRawTransactionManager. c (Credentials/create private-key))
+     (let [c    (Web3j/build (HttpService. http-provider))
+           tm   (FastRawTransactionManager. c (Credentials/create private-key))
            conn #:ethereum{:connection c :transaction-manager tm}]
        (reify
          Client
@@ -33,9 +33,9 @@
 #?(:cljs
    (defn client
      [{:keys [ethereum/http-provider ethereum/private-key]}]
-     (let [c (Web3. http-provider)
-           pk (hex/prefixed private-key)
-           cb (.. c -eth -accounts (privateKeyToAccount pk) -address)
+     (let [c    (Web3. http-provider)
+           pk   (hex/prefixed private-key)
+           cb   (.. c -eth -accounts (privateKeyToAccount pk) -address)
            conn #:ethereum{:connection c :private-key pk :coinbase cb}]
        (reify
          Client

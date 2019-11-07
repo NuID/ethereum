@@ -19,14 +19,14 @@
    (defn send
      [{:keys [ethereum/transaction-manager]}
       {:keys [data gas-price gas-limit to value channel]
-       :or {gas-price default-gas-price
-            gas-limit default-gas-limit
-            to (.getFromAddress transaction-manager)
-            value default-value
-            channel (async/chan)}}]
+       :or   {gas-price default-gas-price
+              gas-limit default-gas-limit
+              to        (.getFromAddress transaction-manager)
+              value     default-value
+              channel   (async/chan)}}]
      (let [tx (.sendTransaction transaction-manager gas-price gas-limit to data value)
-           v (or (and tx (.hasError tx) {:err (.getMessage (.getError tx))})
-                 {:ethereum/transaction-id (.getTransactionHash tx)})]
+           v  (or (and tx (.hasError tx) {:err (.getMessage (.getError tx))})
+                  {:ethereum/transaction-id (.getTransactionHash tx)})]
        (async/put! channel v)
        channel)))
 
@@ -43,7 +43,7 @@
 
 #?(:clj
    (defn send-with-retry
-     [client {:keys [retries] :or {retries 50} :as opts}]
+     [client {:keys [retries] :as opts :or {retries 50}}]
      (async/go-loop [rs retries]
        (if (> rs 0)
          (let [resp (async/<! (send client opts))]
@@ -60,7 +60,7 @@
 #?(:clj
    (defn send-with-reset
      [{:keys [ethereum/transaction-manager] :as client}
-      {:keys [resets] :or {resets 20} :as opts}]
+      {:keys [resets] :as opts :or {resets 20}}]
      (async/go-loop [rs resets]
        (if (> rs 0)
          (let [resp (async/<! (send-with-retry client opts))]
@@ -73,66 +73,82 @@
 #?(:clj
    (defn get-by-hash
      [{:keys [ethereum/connection]}
-      {:keys [ethereum/transaction-id channel] :or {channel (async/chan)}}]
-     (let [tx (-> (.ethGetTransactionByHash connection transaction-id)
-                  (.send)
-                  (.getTransaction)
-                  (.orElse nil))]
-       (async/put! channel (or tx {:err :not-found}))
+      {:keys [ethereum/transaction-id channel]
+       :or   {channel (async/chan)}}]
+     (let [tx
+           (->
+            (.ethGetTransactionByHash connection transaction-id)
+            (.send)
+            (.getTransaction)
+            (.orElse {:err :not-found}))]
+       (async/put! channel tx)
        channel)))
 
 #?(:clj
    (defn receipt
      [{:keys [ethereum/connection]}
-      {:keys [ethereum/transaction-id channel] :or {channel (async/chan)}}]
-     (let [v (-> (.ethGetTransactionReceipt connection transaction-id)
-                 (.send)
-                 (.getTransactionReceipt)
-                 (.orElse nil))]
-       (async/put! channel (or v {:err :not-found}))
+      {:keys [ethereum/transaction-id channel]
+       :or   {channel (async/chan)}}]
+     (let [receipt
+           (->
+            (.ethGetTransactionReceipt connection transaction-id)
+            (.send)
+            (.getTransactionReceipt)
+            (.orElse {:err :not-found}))]
+       (async/put! channel receipt)
        channel)))
 
 #?(:cljs
    (defn send
      [{:keys [ethereum/coinbase ethereum/connection ethereum/private-key]}
       {:keys [data gas-price gas-limit to value channel]
-       :or {gas-price default-gas-price
-            gas-limit default-gas-limit
-            to coinbase
-            value default-value
-            channel (async/chan)}}]
-     (let [tx #js {"gas" gas-limit "to" to "data" data}]
-       (-> (.signTransaction (.-accounts (.-eth connection)) tx private-key)
-           (.then
-            #(.sendSignedTransaction
-              (.-eth connection)
-              (.-rawTransaction %)
-              (fn [err id]
-                (let [v (if err {:err err} {:ethereum/transaction-id id})]
-                  (async/put! channel v)))))
-           (.catch #(async/put! channel {:err %})))
+       :or   {gas-price default-gas-price
+              gas-limit default-gas-limit
+              to        coinbase
+              value     default-value
+              channel   (async/chan)}}]
+     (let [tx       #js {"gas" gas-limit "to" to "data" data}
+           accounts (.-accounts ^js (.-eth connection))]
+       (->
+        (.signTransaction ^js accounts tx private-key)
+        (.then
+         (fn [signed]
+           (.sendSignedTransaction
+            ^js (.-eth connection)
+            (.-rawTransaction ^js signed)
+            (fn [err id]
+              (->>
+               (if err {:err err} {:ethereum/transaction-id id})
+               (async/put! channel))))))
+        (.catch (fn [err] (async/put! channel {:err err}))))
        channel)))
 
 #?(:cljs
    (defn get-by-hash
      [{:keys [ethereum/connection]}
       {:keys [ethereum/transaction-id channel]
-       :or {channel (async/chan)}}]
+       :or   {channel (async/chan)}}]
      (.getTransaction
-      (.-eth connection)
+      ^js (.-eth connection)
       transaction-id
-      #(async/put! channel (or %2 {:err :not-found})))
+      (fn [_ tx]
+        (->>
+         (or tx {:err :not-found})
+         (async/put! channel))))
      channel))
 
 #?(:cljs
    (defn receipt
      [{:keys [ethereum/connection]}
       {:keys [ethereum/transaction-id channel]
-       :or {channel (async/chan)}}]
+       :or   {channel (async/chan)}}]
      (.getTransactionReceipt
-      (.-eth connection)
+      ^js (.-eth connection)
       transaction-id
-      #(async/put! channel (or %2 {:err :not-found})))
+      (fn [_ receipt]
+        (->>
+         (or receipt {:err :not-found})
+         (async/put! channel))))
      channel))
 
 (defn get-input

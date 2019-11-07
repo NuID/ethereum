@@ -1,11 +1,12 @@
-{:builds
+{:deps {:aliases [:shadow]}
+ :builds
  {:browser
-  {:modules {:nuid_ethereum {:entries [nuid.ethereum]}},
+  {:modules    {:nuid_ethereum {:entries [nuid.ethereum]}},
    :output-dir "target/browser",
    :asset-path "target/browser",
-   :target :browser},
+   :target     :browser},
+
   :node
-  {:output-to "target/node/nuid_ethereum.js",
+  {:output-to   "target/node/nuid_ethereum.js",
    :exports-var nuid.ethereum/exports,
-   :target :node-library}},
- :deps {:aliases [:shadow]}}
+   :target      :node-library}}}
