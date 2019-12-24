@@ -1,16 +1,16 @@
 {:deps
- {org.clojure/core.async {:mvn/version "0.5.527"},
+ {org.clojure/core.async {:mvn/version "0.6.532"},
   org.clojure/clojure {:mvn/version "1.10.1"},
   nuid/hex
   {:git/url "https://github.com/nuid/hex.git",
-   :sha "5d180944f6f61ba59dec4d53585d2232d97bb9e3"},
+   :sha "d09bd7039222253c10a6c89714590341fcef2bba"},
   nuid/bn
   {:git/url "https://github.com/nuid/bn.git",
-   :sha "ae061648f41e1e75b5ca1bb97d4ac309328590e0"},
-  org.web3j/core {:mvn/version "4.5.8"}},
+   :sha "08752d9bb8d9809cd12696fc9639022d9578fcfb"},
+  org.web3j/core {:mvn/version "4.5.11"}},
  :aliases
  {:cljs
   {:extra-deps
    {org.clojure/clojurescript {:mvn/version "1.10.597"},
-    thheller/shadow-cljs {:mvn/version "2.8.74"}}}},
+    thheller/shadow-cljs {:mvn/version "2.8.83"}}}},
  :paths ["src"]}
