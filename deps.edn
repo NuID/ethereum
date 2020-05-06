@@ -3,10 +3,10 @@
   org.clojure/clojure {:mvn/version "1.10.1"},
   nuid/hex
   {:git/url "https://github.com/nuid/hex.git",
-   :sha "19bc6839ef814c25021ff183b0a591589243ed9f"},
+   :sha "f1d06a1dad4ddabdbf73d04b334c75901e99e52f"},
   nuid/bn
   {:git/url "https://github.com/nuid/bn.git",
-   :sha "08752d9bb8d9809cd12696fc9639022d9578fcfb"},
+   :sha "fead0882bfd7e2ddcbfc5c694292a49b9573d36e"},
   org.web3j/core {:mvn/version "4.5.18"}},
  :aliases
  {:cljs
