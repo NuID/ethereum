@@ -11,6 +11,14 @@
 
 (def parameters->client impl/parameters->client)
 
-(def send-transaction!             proto/send-transaction!)
-(def get-transaction-by-id         proto/get-transaction-by-id)
-(def get-transaction-receipt-by-id proto/get-transaction-receipt-by-id)
+(defn send-transaction!
+  [client opts]
+  (proto/send-transaction! client opts))
+
+(defn get-transaction-by-id
+  [client opts]
+  (proto/get-transaction-by-id client opts))
+
+(defn get-transaction-receipt-by-id
+  [client opts]
+  (proto/get-transaction-receipt-by-id client opts))
