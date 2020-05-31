@@ -6,10 +6,16 @@
    #?@(:clj  [[clojure.alpha.spec :as s]]
        :cljs [[clojure.spec.alpha :as s]])))
 
+(def networks
+  #{:nuid.ethereum.network/mainnet
+    :nuid.ethereum.network/rinkeby})
+
+(s/def ::network    networks)
 (s/def ::parameters ::client/parameters)
 (s/def ::client     ::proto/client)
 
-(def parameters->client impl/parameters->client)
+(def parameters->client
+  impl/parameters->client)
 
 (defn send-transaction!
   [client opts]
