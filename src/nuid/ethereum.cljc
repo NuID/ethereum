@@ -3,6 +3,7 @@
    [nuid.ethereum.client :as client]
    [nuid.ethereum.impl :as impl]
    [nuid.ethereum.proto :as proto]
+   [nuid.ethereum.transaction :as tx]
    #?@(:clj  [[clojure.alpha.spec :as s]]
        :cljs [[clojure.spec.alpha :as s]])))
 
@@ -10,12 +11,11 @@
   #{:nuid.ethereum.network/mainnet
     :nuid.ethereum.network/rinkeby})
 
-(s/def ::network    networks)
-(s/def ::parameters ::client/parameters)
-(s/def ::client     ::proto/client)
+(s/def ::client  ::proto/client)
+(s/def ::network networks)
+(s/def ::address (s/keys :req [::network ::tx/id]))
 
-(def parameters->client
-  impl/parameters->client)
+(def parameters->client impl/parameters->client)
 
 (defn send-transaction!
   [client opts]
