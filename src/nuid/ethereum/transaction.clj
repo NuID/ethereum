@@ -20,7 +20,7 @@
     (async/put! channel v)
     channel))
 
-  ;; From Web3j
+  ;; NOTE: From Web3j
 (def replace-anomaly-message "replacement transaction underpriced")
 (def nonce-anomaly-message   "nonce too low")
 
