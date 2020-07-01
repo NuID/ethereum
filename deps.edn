@@ -7,6 +7,9 @@
   nuid/hex
   {:git/url "https://github.com/nuid/hex.git",
    :sha "92c73d1826da2fb273c83edc68c0e1bfb6668d25"},
+  nuid/ident
+  {:git/url "https://github.com/nuid/ident.git",
+   :sha "56e386f70036b2bd09d32b23b6ea711434d7b196"},
   nuid/bn
   {:git/url "https://github.com/nuid/bn.git",
    :sha "fc3d2cba333441c4403a16460f7ad1d8f9b45705"},
