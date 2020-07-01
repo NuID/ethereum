@@ -24,23 +24,19 @@ Cross-platform Ethereum API.
 $ clj # or shadow-cljs node-repl
 => (require '[clojure.core.async :as async]) ;; or [cljs.core...]
 => (require '[nuid.ethereum.transaction :as tx])
-=> (require '[nuid.ethereum.address :as addr])
+=> (require '[nuid.ethereum.client :as client])
 => (require '[nuid.ethereum :as eth])
 => (require '[nuid.bytes :as bytes])
 => (require '[nuid.hex :as hex])
 => (def http-provider "...") ;; e.g. https://rinkeby.infura.io/...
 => (def private-key "...")
-=> (def config #:ethereum{:http-provider http-provider
-                          :private-key private-key})
-=> (def client (eth/client config))
-=> (def resp (atom nil))
-=> (def data (str "0x" (hex/encode "blockchain! 🤡")))
-=> (async/take! (eth/send-transaction client {:data data})
-                (partial reset! resp))
-;; finalizing ...
-=> (async/take! (eth/get-transaction-by-hash client @resp)
-                (partial reset! resp))
-=> (bytes/str (hex/decode (tx/get-input @resp))) ;; => "blockchain! 🤡"
+=> (def params {::client/http-provider http-provider ::private-key private-key})
+=> (def client (eth/parameters->client params))
+=> (def resp-atom (atom []))
+=> (def data (hex/prefixed (hex/encode "flavor")))
+=> (async/take!
+    (eth/send-transaction! client {::tx/data data})
+    (partial swap! resp-atom conj))
 ```
 
 ## Licensing
