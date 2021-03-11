@@ -1,6 +1,6 @@
 (ns nuid.ethereum.client
   (:require
-   [clojure.alpha.spec :as s])
+   [clojure.spec.alpha :as s])
   (:import
    (org.web3j.crypto Credentials)
    (org.web3j.protocol Web3j)

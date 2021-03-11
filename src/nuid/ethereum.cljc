@@ -1,12 +1,11 @@
 (ns nuid.ethereum
   (:require
+   [clojure.spec.alpha :as s]
    [nuid.ethereum.client :as client]
    [nuid.ethereum.impl :as impl]
    [nuid.ethereum.proto :as proto]
    [nuid.ethereum.transaction :as tx]
-   [nuid.ident.ethereum :as ident.ethereum]
-   #?@(:clj  [[clojure.alpha.spec :as s]]
-       :cljs [[clojure.spec.alpha :as s]])))
+   [nuid.ident.ethereum :as ident.ethereum]))
 
 (def networks ident.ethereum/networks)
 

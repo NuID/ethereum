@@ -1,7 +1,6 @@
 (ns nuid.ethereum.proto
   (:require
-   #?@(:clj  [[clojure.alpha.spec :as s]]
-       :cljs [[clojure.spec.alpha :as s]])))
+   [clojure.spec.alpha :as s]))
 
 (defprotocol Client
   (send-transaction!             [client opts])
