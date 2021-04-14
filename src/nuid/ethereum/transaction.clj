@@ -5,6 +5,32 @@
    [nuid.ethereum.client :as client]
    [nuid.ethereum.lib :as lib]))
 
+
+   ;;;
+   ;;; NOTE: helpers
+   ;;;
+
+
+(def replace-anomaly-message "replacement transaction underpriced") ; NOTE: from web3j
+(def nonce-anomaly-message   "nonce too low") ; NOTE: from web3j
+
+(def retry?
+  (comp
+   #{replace-anomaly-message
+     nonce-anomaly-message}
+   ::anomaly))
+
+(def reset?
+  (comp
+   #{::retry}
+   ::anomaly))
+
+
+   ;;;
+   ;;; NOTE: api; `send`
+   ;;;
+
+
 (defn send!
   [{::client/keys [transaction-manager]}
    {::keys [data channel gas-limit gas-price to value]
@@ -20,17 +46,6 @@
     (async/put! channel v)
     channel))
 
-  ;; NOTE: From Web3j
-(def replace-anomaly-message "replacement transaction underpriced")
-(def nonce-anomaly-message   "nonce too low")
-
-(def retry?
-  (comp
-   #{replace-anomaly-message
-     nonce-anomaly-message}
-   ::anomaly))
-
-  ;; TODO: async/retry
 (defn send-with-retry!
   [config {::keys [retries] :as opts :or {retries 50}}]
   (async/go-loop [rs retries]
@@ -40,11 +55,6 @@
           (recur (assoc opts ::retries (dec retries)))
           resp))
       {::anomaly ::retry})))
-
-(def reset?
-  (comp
-   #{::retry}
-   ::anomaly))
 
 (defn send-with-reset!
   [{::client/keys [transaction-manager] :as config}
@@ -59,6 +69,12 @@
           resp))
       {::anomaly ::reset})))
 
+
+   ;;;
+   ;;; NOTE: `get-by-id`
+   ;;;
+
+
 (defn get-by-id
   [{::client/keys [conn]}
    {::keys [id channel]
@@ -71,6 +87,12 @@
          (.orElse {::anomaly ::not-found}))]
     (async/put! channel tx)
     channel))
+
+
+   ;;;
+   ;;; NOTE: `get-receipt-by-id`
+   ;;;
+
 
 (defn get-receipt-by-id
   [{::client/keys [conn]}

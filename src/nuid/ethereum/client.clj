@@ -7,6 +7,12 @@
    (org.web3j.protocol.http HttpService)
    (org.web3j.tx FastRawTransactionManager)))
 
+
+   ;;;
+   ;;; NOTE: specs, predicates
+   ;;;
+
+
 (s/def ::parameters
   (s/keys
    :req
@@ -19,6 +25,12 @@
    [::conn
     ::transaction-manager]))
 
+
+   ;;;
+   ;;; NOTE: client configuration helpers
+   ;;;
+
+
 (defn conn
   [{::keys [http-provider]}]
   (->>
@@ -30,6 +42,12 @@
   (->>
    (Credentials/create private-key)
    (FastRawTransactionManager. conn)))
+
+
+   ;;;
+   ;;; NOTE: api
+   ;;;
+
 
 (defn parameters->config
   [params]

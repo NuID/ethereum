@@ -6,12 +6,24 @@
    [nuid.ethereum.client :as client]
    [nuid.ethereum.lib :as lib]))
 
+
+   ;;;
+   ;;; NOTE: helpers
+   ;;;
+
+
 (defn -send-signed!
   [{::client/keys [conn]} channel signed]
   (.sendSignedTransaction
    (obj/get conn "eth")
    (obj/get signed "rawTransaction")
    (fn [err id] (async/put! channel (if err {::anomaly err} {::id id})))))
+
+
+   ;;;
+   ;;; NOTE: api
+   ;;;
+
 
 (defn send!
   [{::client/keys [coinbase conn private-key] :as config}
