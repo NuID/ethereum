@@ -4,6 +4,12 @@
    [nuid.hex :as hex]
    ["Web3" :as Web3]))
 
+
+   ;;;
+   ;;; NOTE: specs, predicates
+   ;;;
+
+
 (s/def ::parameters
   (s/keys
    :req
@@ -16,6 +22,12 @@
    [::coinbase
     ::conn
     ::private-key]))
+
+
+   ;;;
+   ;;; NOTE: api
+   ;;;
+
 
 (defn parameters->config
   [{::keys [http-provider private-key]}]
