@@ -3,13 +3,13 @@
   org.clojure/clojure {:mvn/version "1.10.1"},
   nuid/hex
   {:git/url "https://github.com/nuid/hex.git",
-   :sha "bfdaa119d39d97525ded25ed58e1b33c1395e0b2"},
+   :sha "02ac9a4b787ff74afb07e0ee253e97d6602d45e4"},
   nuid/ident
   {:git/url "https://github.com/nuid/ident.git",
    :sha "f4b9ef164b175f515f032aa194a17727d71eedb4"},
   nuid/bn
   {:git/url "https://github.com/nuid/bn.git",
-   :sha "56019bc07d9cf15bf69982b8093212e290c677ca"},
+   :sha "30036cd9bf7654fef3987b57887878b1d8f8f76b"},
   org.web3j/core {:mvn/version "4.5.18"}},
  :aliases
  {:cljs {:extra-deps {thheller/shadow-cljs {:mvn/version "2.11.23"}}}},
